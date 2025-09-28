@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Métricas - Mercado Bebidas Energéticas Portugal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary: #1e3a8a;
+            --secondary: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --dark: #1f2937;
+            --light: #f9fafb;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%) !important;
+            padding: 1rem 0;
+        }
+
+        .data-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .data-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .metric-label {
+            font-size: 0.85rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .metric-unit {
+            font-size: 0.9rem;
+            color: #9ca3af;
+            margin-left: 0.25rem;
+        }
+
+        .data-section {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--dark);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid #e5e7eb;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .data-row:last-child {
+            border-bottom: none;
+        }
+
+        .data-label {
+            font-size: 0.9rem;
+            color: #4b5563;
+        }
+
+        .data-value {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        .brand-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .filter-card {
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .tab-nav {
+            background: white;
+            border-radius: 8px;
+            padding: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .tab-nav .nav-link {
+            color: #6b7280;
+            border-radius: 6px;
+            padding: 0.5rem 1rem;
+            margin: 0 0.25rem;
+            transition: all 0.3s ease;
+        }
+
+        .tab-nav .nav-link.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .export-buttons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            margin-bottom: 1rem;
+        }
+
+        .data-table-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        .vertical-table {
+            width: 100%;
+        }
+
+        .vertical-table th {
+            background: #f9fafb;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #4b5563;
+            padding: 0.75rem;
+            text-align: left;
+            white-space: nowrap;
+        }
+
+        .vertical-table td {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #f3f4f6;
+        }
+
+        .vertical-table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .info-tooltip {
+            cursor: help;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body>
+    <!-- Cabeçalho -->
+    <nav class="navbar navbar-dark shadow-sm">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-lightning-charge-fill"></i>
+                Simulador de Métricas de Marketing - Mercado Bebidas Energéticas
+            </span>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-light text-dark me-3">
+                    <i class="bi bi-calendar3"></i> 2 Anos de Dados | 8 Marcas | 100% Mercado
+                </span>
+                <span class="text-white" id="currentDateTime"></span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <!-- Painel Lateral -->
+            <div class="col-lg-2">
+                <!-- Seletor de Marca -->
+                <div class="filter-card">
+                    <div class="metric-label">Marca</div>
+                    <select class="form-select form-select-sm" id="brandSelector">
+                        <option value="all">Todas as Marcas</option>
+                        <option value="volt">VOLT Energy</option>
+                        <option value="thunder">Thunder Strike</option>
+                        <option value="nitro">NitroFuel</option>
+                        <option value="power">PowerRush</option>
+                        <option value="elite">EliteBoost</option>
+                        <option value="wildcat">WildCat Energy</option>
+                        <option value="zen">ZenFlow</option>
+                        <option value="max">MaxForce</option>
+                    </select>
+                </div>
+
+                <!-- Período de Análise -->
+                <div class="filter-card">
+                    <div class="metric-label">Período</div>
+                    <select class="form-select form-select-sm mb-2" id="periodType">
+                        <option value="daily">Diário</option>
+                        <option value="weekly">Semanal</option>
+                        <option value="monthly">Mensal</option>
+                        <option value="quarterly">Trimestral</option>
+                        <option value="yearly">Anual</option>
+                    </select>
+                    <input type="date" class="form-control form-control-sm mb-2" id="startDate">
+                    <input type="date" class="form-control form-control-sm" id="endDate">
+                </div>
+
+                <!-- Informação do Mercado -->
+                <div class="filter-card">
+                    <div class="metric-label mb-2">Dados do Mercado</div>
+                    <div class="data-row">
+                        <span class="data-label">Valor Total</span>
+                        <span class="data-value">€185M</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Volume</span>
+                        <span class="data-value">52M L</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Consumidores</span>
+                        <span class="data-value">1.8M</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Crescimento</span>
+                        <span class="data-value">+12%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Área Principal -->
+            <div class="col-lg-10">
+                <!-- Navegação por Categorias -->
+                <ul class="nav tab-nav" id="categoryTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-category="overview" href="#">
+                            <i class="bi bi-grid"></i> Visão Geral
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-category="financial" href="#">
+                            <i class="bi bi-currency-euro"></i> Financeiro
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-category="customers" href="#">
+                            <i class="bi bi-people"></i> Clientes
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-category="market" href="#">
+                            <i class="bi bi-globe"></i> Mercado
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-category="sales" href="#">
+                            <i class="bi bi-cart"></i> Vendas
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-category="marketing" href="#">
+                            <i class="bi bi-megaphone"></i> Comunicação
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-category="digital" href="#">
+                            <i class="bi bi-laptop"></i> Digital
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Botões de Exportação -->
+                <div class="export-buttons">
+                    <button class="btn btn-outline-primary btn-sm" onclick="exportData('csv')">
+                        <i class="bi bi-file-earmark-csv"></i> Exportar CSV
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="exportData('json')">
+                        <i class="bi bi-file-earmark-code"></i> Exportar JSON
+                    </button>
+                    <button class="btn btn-primary btn-sm" onclick="exportAll()">
+                        <i class="bi bi-download"></i> Exportar Tudo
+                    </button>
+                </div>
+
+                <!-- Área de Conteúdo Dinâmico -->
+                <div id="dataContent">
+                    <!-- O conteúdo será inserido dinamicamente aqui -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template: Visão Geral -->
+    <template id="overviewTemplate">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="data-card">
+                    <div class="metric-label">Quota de Mercado</div>
+                    <div class="metric-value">{{marketShare}}<span class="metric-unit">%</span></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="data-card">
+                    <div class="metric-label">Vendas (Período)</div>
+                    <div class="metric-value">{{totalSales}}<span class="metric-unit">un</span></div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="data-card">
+                    <div class="metric-label">Faturação</div>
+                    <div class="metric-value">{{revenue}}</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="data-card">
+                    <div class="metric-label">Clientes Totais</div>
+                    <div class="metric-value">{{customers}}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="data-section">
+            <h5 class="section-title">Resumo de Dados Disponíveis</h5>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="data-row">
+                        <span class="data-label">Registos Diários</span>
+                        <span class="data-value">730</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Decisões Estratégicas</span>
+                        <span class="data-value">{{decisions}}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Campanhas de Marketing</span>
+                        <span class="data-value">{{campaigns}}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="data-row">
+                        <span class="data-label">Transações Registadas</span>
+                        <span class="data-value">{{transactions}}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">Pontos de Venda</span>
+                        <span class="data-value">{{pointsOfSale}}</span>
+                    </div>
+                    <div class="data-row">
+                        <span class="data-label">SKUs Ativos</span>
+                        <span class="data-value">{{skus}}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Template: Dados Financeiros -->
+    <template id="financialTemplate">
+        <div class="data-section">
+            <h5 class="section-title">Componentes para Métricas Financeiras</h5>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">Receitas</h6>
+                    <table class="vertical-table">
+                        <tbody>
+                            <tr>
+                                <th width="60%">Vendas Brutas</th>
+                                <td class="text-end">{{grossRevenue}}</td>
+                            </tr>
+                            <tr>
+                                <th>Descontos Concedidos</th>
+                                <td class="text-end">{{discounts}}</td>
+                            </tr>
+                            <tr>
+                                <th>Devoluções</th>
+                                <td class="text-end">{{returns}}</td>
+                            </tr>
+                            <tr class="table-primary">
+                                <th>Vendas Líquidas</th>
+                                <td class="text-end fw-bold">{{netRevenue}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h6 class="text-muted mb-3 mt-4">Custos Diretos</h6>
+                    <table class="vertical-table">
+                        <tbody>
+                            <tr>
+                                <th width="60%">Custo Matérias-Primas</th>
+                                <td class="text-end">{{materialCost}}</td>
+                            </tr>
+                            <tr>
+                                <th>Custo Mão-de-Obra Direta</th>
+                                <td class="text-end">{{laborCost}}</td>
+                            </tr>
+                            <tr>
+                                <th>Custo Embalagem</th>
+                                <td class="text-end">{{packagingCost}}</td>
+                            </tr>
+                            <tr class="table-warning">
+                                <th>Total Custos Diretos</th>
+                                <td class="text-end fw-bold">{{totalDirectCost}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">Custos Indiretos</h6>
+                    <table class="vertical-table">
+                        <tbody>
+                            <tr>
+                                <th width="60%">Custos Fixos Produção</th>
+                                <td class="text-end">{{fixedProductionCost}}</td>
+                            </tr>
+                            <tr>
+                                <th>Custos Administrativos</th>
+                                <td class="text-end">{{administrativeCost}}</td>
+                            </tr>
+                            <tr>
+                                <th>Custos Armazenamento</th>
+                                <td class="text-end">{{storageCost}}</td>
+                            </tr>
+                            <tr>
+                                <th>Custos Distribuição</th>
+                                <td class="text-end">{{distributionCost}}</td>
+                            </tr>
+                            <tr class="table-warning">
+                                <th>Total Custos Indiretos</th>
+                                <td class="text-end fw-bold">{{totalIndirectCost}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h6 class="text-muted mb-3 mt-4">Resultados</h6>
+                    <table class="vertical-table">
+                        <tbody>
+                            <tr>
+                                <th width="60%">Margem Bruta</th>
+                                <td class="text-end">{{grossMargin}}</td>
+                            </tr>
+                            <tr>
+                                <th>Resultado Operacional</th>
+                                <td class="text-end">{{operatingResult}}</td>
+                            </tr>
+                            <tr class="table-success">
+                                <th>Lucro Líquido</th>
+                                <td class="text-end fw-bold">{{netProfit}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Template: Dados de Clientes -->
+    <template id="customersTemplate">
+        <div class="data-section">
+            <h5 class="section-title">Componentes para Métricas de Clientes</h5>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">Base de Clientes B2C</h6>
+                    <table class="vertical-table">
+                        <tbody>
+                            <tr>
+                                <th width="60%">Total Clientes B2C</th>
+                                <td class="text-end">{{totalB2C}}</td>
+                            </tr>
+                            <tr>
+                                <th>Novos Clientes (período)</th>
+                                <td class="text-end">{{newB2C}}</td>
+                            </tr>
+                            <tr>
+                                <th>Clientes Perdidos (período)</th>
+                                <td class="text-end">{{lostB2C}}</td>
+                            </tr>
+                            <tr>
+                                <th>Clientes Retidos</th>
+                                <td class="text-end">{{retainedB2C}}</td>
+                            </tr>
+                            <tr>
+                                <th>Clientes Reativados</th>
+                                <td class="text-end">{{reactivatedB2C}}</td>
+                            </tr>
+                            <tr>
+                                <th>Clientes Inativos</th>
+                                <td class="text-end">{{inactiveB2C}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h6 class="text-muted mb-3 mt-4">Origem dos Clientes</h6>
+                    <table class="vertical-table">
+                        <tbody>
+                            <tr>
+                                <th width="60%">Via Publicidade</th>
+                                <td class="text-end">{{viaAdvertising}}</td>
+                            </tr>
+                            <tr>
+                                <th>Via Promoção</th>
+                                <td class="text-end">{{viaPromotion}}</td>
+                            </tr>
+                            <tr>
+                                <th>Via Recomendação</th>
+                                <td class="text-end">{{viaReferral}}</td>
+                            </tr>
+                            <tr>
+                                <th>Via Digital</th>
+                                <td class="text-end">{{viaDigital}}</td>
+                            </tr>
+                            <tr>
+                                <th>Espontâneos</th>
+                                <td class="text-end">{{viaSpontaneous}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="col-md-6">
+                    <h6 class="text-muted mb-3">Base de Clientes B2B</h6>
+                    <table class="vertical-table">
+                        <tbody>
+                            <tr>
+                                <th width="60%">Total Clientes B2B</th>
+                                <td class="text-end">{{totalB2B}}</td>
+                            </tr>
+                            <tr>
+                                <th>Novos Clientes B2B</th>
+                                <td class="text-end">{{newB2B}}</td>
+                            </tr>
+                            <tr>
+                                <th>Clientes B2B Perdidos</th>
+                                <td class="text-end">{{lostB2B}}</td>
+                            </tr>
+                            <tr>
+                                <th>Pontos de Venda Ativos</th>
+                                <td class="text-end">{{activePoS}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h6 class="text-muted mb-3 mt-4">Comportamento de Compra</h6>
+                    <table class="vertical-table">
+                        <tbody>
+                            <tr>
+                                <th width="60%">Frequência Média Compra</th>
+                                <td class="text-end">{{purchaseFrequency}}</td>
+                            </tr>
+                            <tr>
+                                <th>Valor Médio Compra</th>
+                                <td class="text-end">{{averagePurchase}}</td>
+                            </tr>
+                            <tr>
+                                <th>Quantidade Média</th>
+                                <td class="text-end">{{averageQuantity}}</td>
+                            </tr>
+                            <tr>
+                                <th>Intervalo entre Compras</th>
+                                <td class="text-end">{{daysBetween}} dias</td>
+                            </tr>
+                            <tr>
+                                <th>Taxa de Recompra</th>
+                                <td class="text-end">{{repurchaseRate}}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+
+                    <h6 class="text-muted mb-3 mt-4">Satisfação e Lealdade</h6>
+                    <table class="vertical-table">
+                        <tbody>
+                            <tr>
+                                <th width="60%">Promotores (9-10)</th>
+                                <td class="text-end">{{promoters}}</td>
+                            </tr>
+                            <tr>
+                                <th>Neutros (7-8)</th>
+                                <td class="text-end">{{neutrals}}</td>
+                            </tr>
+                            <tr>
+                                <th>Detratores (0-6)</th>
+                                <td class="text-end">{{detractors}}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="data-generator-v2.js"></script>
+    <script src="app-v3.js"></script>
+</body>
+</html>
