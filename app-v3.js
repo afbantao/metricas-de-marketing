@@ -7,6 +7,7 @@ class SimuladorMetricasMarketing {
         this.periodoSelecionado = 'daily';
         this.dataInicio = null;
         this.dataFim = null;
+        this.charts = {};
 
         this.init();
     }
@@ -69,9 +70,8 @@ class SimuladorMetricasMarketing {
             this.atualizarVista();
         });
 
-        // Funções de exportação
-        window.exportData = (formato) => this.exportarDados(formato, false);
-        window.exportAll = () => this.exportarDados('json', true);
+        // Função de exportação Excel
+        window.exportarParaExcel = () => this.exportarParaExcel();
     }
 
     atualizarVista() {
@@ -100,6 +100,263 @@ class SimuladorMetricasMarketing {
                 container.innerHTML = this.gerarDadosDigitais();
                 break;
         }
+
+        // Atualizar gráficos
+        this.atualizarGraficos();
+    }
+
+    atualizarGraficos() {
+        const chartsArea = document.getElementById('chartsArea');
+        if (!chartsArea) return;
+
+        chartsArea.style.display = 'block';
+
+        const dados = this.obterDadosFiltrados();
+        if (dados.length === 0) return;
+
+        // Preparar dados para gráficos
+        const labels = [];
+        const vendasData = [];
+        const receitaData = [];
+        const clientesData = [];
+
+        // Agregar dados por período
+        const dadosAgregados = this.agregarDadosPorPeriodo(dados);
+
+        dadosAgregados.forEach(d => {
+            labels.push(d.label);
+            vendasData.push(d.unitsSold);
+            receitaData.push(d.netRevenue);
+            clientesData.push(d.totalCustomers);
+        });
+
+        // Gráfico Principal (Linha/Área)
+        this.criarGraficoPrincipal(labels, vendasData, receitaData);
+
+        // Gráfico Pizza (Quota de Mercado)
+        this.criarGraficoPizza();
+
+        // Gráfico de Comparação (Barras)
+        this.criarGraficoComparacao(labels, clientesData);
+    }
+
+    agregarDadosPorPeriodo(dados) {
+        const agregados = [];
+
+        if (this.periodoSelecionado === 'daily') {
+            // Últimos 30 dias
+            const ultimosDias = dados.slice(-30);
+            ultimosDias.forEach(d => {
+                agregados.push({
+                    label: new Date(d.date).toLocaleDateString('pt-PT', { day: '2-digit', month: 'short' }),
+                    unitsSold: d.unitsSold,
+                    netRevenue: d.netRevenue,
+                    totalCustomers: d.totalB2CCustomers + d.totalB2BCustomers
+                });
+            });
+        } else if (this.periodoSelecionado === 'monthly') {
+            // Agregar por mês
+            const meses = {};
+            dados.forEach(d => {
+                const mes = new Date(d.date).toLocaleDateString('pt-PT', { year: 'numeric', month: 'short' });
+                if (!meses[mes]) {
+                    meses[mes] = {
+                        label: mes,
+                        unitsSold: 0,
+                        netRevenue: 0,
+                        totalCustomers: 0,
+                        count: 0
+                    };
+                }
+                meses[mes].unitsSold += d.unitsSold;
+                meses[mes].netRevenue += d.netRevenue;
+                meses[mes].totalCustomers = d.totalB2CCustomers + d.totalB2BCustomers;
+                meses[mes].count++;
+            });
+
+            Object.values(meses).forEach(m => agregados.push(m));
+        } else if (this.periodoSelecionado === 'yearly') {
+            // Agregar por ano
+            const anos = {};
+            dados.forEach(d => {
+                const ano = new Date(d.date).getFullYear();
+                if (!anos[ano]) {
+                    anos[ano] = {
+                        label: ano.toString(),
+                        unitsSold: 0,
+                        netRevenue: 0,
+                        totalCustomers: 0
+                    };
+                }
+                anos[ano].unitsSold += d.unitsSold;
+                anos[ano].netRevenue += d.netRevenue;
+                anos[ano].totalCustomers = d.totalB2CCustomers + d.totalB2BCustomers;
+            });
+
+            Object.values(anos).forEach(a => agregados.push(a));
+        }
+
+        return agregados;
+    }
+
+    criarGraficoPrincipal(labels, vendasData, receitaData) {
+        const ctx = document.getElementById('mainChart');
+        if (!ctx) return;
+
+        if (this.charts.main) {
+            this.charts.main.destroy();
+        }
+
+        this.charts.main = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Vendas (unidades)',
+                    data: vendasData,
+                    borderColor: 'rgb(59, 130, 246)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    yAxisID: 'y',
+                    tension: 0.4
+                }, {
+                    label: 'Receita Líquida (€)',
+                    data: receitaData,
+                    borderColor: 'rgb(16, 185, 129)',
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    yAxisID: 'y1',
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Evolução de Vendas e Receita'
+                    },
+                    legend: {
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        type: 'linear',
+                        display: true,
+                        position: 'left',
+                        title: {
+                            display: true,
+                            text: 'Unidades Vendidas'
+                        }
+                    },
+                    y1: {
+                        type: 'linear',
+                        display: true,
+                        position: 'right',
+                        title: {
+                            display: true,
+                            text: 'Receita (€)'
+                        },
+                        grid: {
+                            drawOnChartArea: false
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    criarGraficoPizza() {
+        const ctx = document.getElementById('pieChart');
+        if (!ctx) return;
+
+        if (this.charts.pie) {
+            this.charts.pie.destroy();
+        }
+
+        const marcas = marketSimulator.getAllBrands();
+        const labels = [];
+        const data = [];
+        const colors = [];
+
+        marcas.forEach((marca, index) => {
+            labels.push(marca.name);
+            const dadosMarca = marketSimulator.getHistoricalData(marca.id, this.dataInicio, this.dataFim);
+            const vendas = dadosMarca.reduce((sum, d) => sum + d.unitsSold, 0);
+            data.push(vendas);
+            colors.push(`hsl(${index * 45}, 70%, 50%)`);
+        });
+
+        this.charts.pie = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: colors
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Distribuição do Mercado'
+                    },
+                    legend: {
+                        position: 'right'
+                    }
+                }
+            }
+        });
+    }
+
+    criarGraficoComparacao(labels, clientesData) {
+        const ctx = document.getElementById('comparisonChart');
+        if (!ctx) return;
+
+        if (this.charts.comparison) {
+            this.charts.comparison.destroy();
+        }
+
+        this.charts.comparison = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels.slice(-12),
+                datasets: [{
+                    label: 'Base de Clientes',
+                    data: clientesData.slice(-12),
+                    backgroundColor: 'rgba(147, 51, 234, 0.8)'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Evolução da Base de Clientes'
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Número de Clientes'
+                        }
+                    }
+                }
+            }
+        });
     }
 
     gerarVisaoGeral() {
@@ -1131,50 +1388,169 @@ class SimuladorMetricasMarketing {
         });
     }
 
-    exportarDados(formato, tudo = false) {
-        let dados;
-        let nomeFicheiro;
+    exportarParaExcel() {
+        // Criar novo workbook
+        const wb = XLSX.utils.book_new();
 
-        if (tudo) {
-            dados = marketSimulator.exportData('json');
-            nomeFicheiro = `dados_completos_bebidas_energeticas_${new Date().toISOString().split('T')[0]}`;
-        } else {
-            dados = this.obterDadosFiltrados();
-            nomeFicheiro = `dados_${this.marcaSelecionada}_${this.categoriaSelecionada}_${new Date().toISOString().split('T')[0]}`;
-        }
+        // Dados por marca selecionada
+        const marcas = this.marcaSelecionada === 'all'
+            ? marketSimulator.getAllBrands()
+            : [marketSimulator.getAllBrands().find(b => b.id === this.marcaSelecionada)];
 
-        if (formato === 'csv') {
-            this.descarregarCSV(dados, nomeFicheiro);
-        } else {
-            this.descarregarJSON(dados, nomeFicheiro);
-        }
+        marcas.forEach(marca => {
+            // Folha de Dados Completos
+            const dadosCompletos = marketSimulator.getHistoricalData(marca.id, this.dataInicio, this.dataFim);
+            const wsDados = XLSX.utils.json_to_sheet(dadosCompletos.map(d => ({
+                'Data': new Date(d.date).toLocaleDateString('pt-PT'),
+                'Marca': marca.name,
+                'Vendas (un)': d.unitsSold,
+                'Vendas Brutas (€)': d.grossRevenue,
+                'Descontos (€)': d.discountsGiven,
+                'Devoluções (€)': d.returnsValue,
+                'Vendas Líquidas (€)': d.netRevenue,
+                'Clientes B2C': d.totalB2CCustomers,
+                'Clientes B2B': d.totalB2BCustomers,
+                'Novos Clientes': d.newB2CCustomers,
+                'Investimento Marketing (€)': d.marketingInvestment,
+                'Impressões': d.impressions,
+                'Cliques': d.clicks,
+                'Conversões': d.conversions,
+                'Seguidores Sociais': d.socialFollowers,
+                'Engagement Rate (%)': d.engagementRate,
+                'Quota Mercado (%)': ((d.unitsSold / marketSimulator.getTotalMarketSales(d.date)) * 100).toFixed(2)
+            })));
+            XLSX.utils.book_append_sheet(wb, wsDados, marca.id === 'all' ? 'Todos Dados' : marca.name);
+        });
+
+        // Folha de Componentes Financeiros
+        const componentesFinanceiros = this.gerarDadosExcelFinanceiros();
+        const wsFinanceiro = XLSX.utils.json_to_sheet(componentesFinanceiros);
+        XLSX.utils.book_append_sheet(wb, wsFinanceiro, 'Financeiro');
+
+        // Folha de Componentes Clientes
+        const componentesClientes = this.gerarDadosExcelClientes();
+        const wsClientes = XLSX.utils.json_to_sheet(componentesClientes);
+        XLSX.utils.book_append_sheet(wb, wsClientes, 'Clientes');
+
+        // Folha de Análise de Mercado
+        const analise = this.gerarAnaliseExcel();
+        const wsAnalise = XLSX.utils.json_to_sheet(analise);
+        XLSX.utils.book_append_sheet(wb, wsAnalise, 'Análise');
+
+        // Exportar ficheiro
+        const nomeFicheiro = `metricas_marketing_${this.marcaSelecionada}_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, nomeFicheiro);
     }
 
-    descarregarCSV(dados, nomeFicheiro) {
-        let csv = '';
-
-        if (Array.isArray(dados) && dados.length > 0) {
-            const cabecalhos = Object.keys(dados[0]);
-            csv = cabecalhos.join(';') + '\n';
-            dados.forEach(linha => {
-                csv += cabecalhos.map(h => linha[h] || '').join(';') + '\n';
-            });
-        }
-
-        const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `${nomeFicheiro}.csv`;
-        link.click();
+    gerarDadosExcelFinanceiros() {
+        const dados = this.obterDadosFiltrados();
+        return [{
+            'Componente': 'Vendas Brutas',
+            'Valor (€)': this.somarCampo(dados, 'grossRevenue'),
+            'Período': `${this.dataInicio.toLocaleDateString('pt-PT')} - ${this.dataFim.toLocaleDateString('pt-PT')}`
+        }, {
+            'Componente': 'Descontos Concedidos',
+            'Valor (€)': this.somarCampo(dados, 'discountsGiven'),
+            'Período': `${this.dataInicio.toLocaleDateString('pt-PT')} - ${this.dataFim.toLocaleDateString('pt-PT')}`
+        }, {
+            'Componente': 'Devoluções',
+            'Valor (€)': this.somarCampo(dados, 'returnsValue'),
+            'Período': `${this.dataInicio.toLocaleDateString('pt-PT')} - ${this.dataFim.toLocaleDateString('pt-PT')}`
+        }, {
+            'Componente': 'Vendas Líquidas',
+            'Valor (€)': this.somarCampo(dados, 'netRevenue'),
+            'Período': `${this.dataInicio.toLocaleDateString('pt-PT')} - ${this.dataFim.toLocaleDateString('pt-PT')}`
+        }, {
+            'Componente': 'Custos Diretos',
+            'Valor (€)': this.somarCampo(dados, 'directCosts'),
+            'Período': `${this.dataInicio.toLocaleDateString('pt-PT')} - ${this.dataFim.toLocaleDateString('pt-PT')}`
+        }, {
+            'Componente': 'Custos Indiretos',
+            'Valor (€)': this.somarCampo(dados, 'indirectCosts'),
+            'Período': `${this.dataInicio.toLocaleDateString('pt-PT')} - ${this.dataFim.toLocaleDateString('pt-PT')}`
+        }, {
+            'Componente': 'Margem Bruta',
+            'Valor (€)': this.somarCampo(dados, 'grossMargin'),
+            'Período': `${this.dataInicio.toLocaleDateString('pt-PT')} - ${this.dataFim.toLocaleDateString('pt-PT')}`
+        }, {
+            'Componente': 'Lucro Líquido',
+            'Valor (€)': this.somarCampo(dados, 'netProfit'),
+            'Período': `${this.dataInicio.toLocaleDateString('pt-PT')} - ${this.dataFim.toLocaleDateString('pt-PT')}`
+        }];
     }
 
-    descarregarJSON(dados, nomeFicheiro) {
-        const json = typeof dados === 'string' ? dados : JSON.stringify(dados, null, 2);
-        const blob = new Blob([json], { type: 'application/json' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `${nomeFicheiro}.json`;
-        link.click();
+    gerarDadosExcelClientes() {
+        const dados = this.obterDadosFiltrados();
+        const ultimoDado = dados[dados.length - 1] || {};
+        return [{
+            'Métrica': 'Total Clientes B2C',
+            'Valor': ultimoDado.totalB2CCustomers || 0,
+            'Tipo': 'Stock'
+        }, {
+            'Métrica': 'Total Clientes B2B',
+            'Valor': ultimoDado.totalB2BCustomers || 0,
+            'Tipo': 'Stock'
+        }, {
+            'Métrica': 'Novos Clientes (período)',
+            'Valor': this.somarCampo(dados, 'newB2CCustomers'),
+            'Tipo': 'Fluxo'
+        }, {
+            'Métrica': 'Clientes Perdidos (período)',
+            'Valor': this.somarCampo(dados, 'lostB2CCustomers'),
+            'Tipo': 'Fluxo'
+        }, {
+            'Métrica': 'Clientes Retidos',
+            'Valor': ultimoDado.retainedB2CCustomers || 0,
+            'Tipo': 'Stock'
+        }, {
+            'Métrica': 'Clientes Reativados',
+            'Valor': this.somarCampo(dados, 'reactivatedB2CCustomers'),
+            'Tipo': 'Fluxo'
+        }];
+    }
+
+    gerarAnaliseExcel() {
+        const dados = this.obterDadosFiltrados();
+        return [{
+            'Análise': 'Quota de Mercado',
+            'Valor': `${this.calcularQuotaMercado()}%`,
+            'Interpretação': 'Percentagem do mercado total'
+        }, {
+            'Análise': 'Taxa de Crescimento',
+            'Valor': `${this.calcularTaxaCrescimento()}%`,
+            'Interpretação': 'Crescimento no período analisado'
+        }, {
+            'Análise': 'ROI Marketing',
+            'Valor': this.calcularROI(),
+            'Interpretação': 'Retorno sobre investimento em marketing'
+        }, {
+            'Análise': 'Taxa de Retenção',
+            'Valor': `${this.calcularTaxaRetencao()}%`,
+            'Interpretação': 'Percentagem de clientes retidos'
+        }];
+    }
+
+    calcularTaxaCrescimento() {
+        const dados = this.obterDadosFiltrados();
+        if (dados.length < 2) return 0;
+        const primeiro = dados[0].netRevenue;
+        const ultimo = dados[dados.length - 1].netRevenue;
+        return ((ultimo - primeiro) / primeiro * 100).toFixed(1);
+    }
+
+    calcularROI() {
+        const dados = this.obterDadosFiltrados();
+        const receita = this.somarCampo(dados, 'netRevenue');
+        const investimento = this.somarCampo(dados, 'marketingInvestment');
+        return investimento > 0 ? ((receita - investimento) / investimento).toFixed(2) : '0';
+    }
+
+    calcularTaxaRetencao() {
+        const dados = this.obterDadosFiltrados();
+        const ultimoDado = dados[dados.length - 1] || {};
+        const totalClientes = ultimoDado.totalB2CCustomers || 1;
+        const clientesRetidos = ultimoDado.retainedB2CCustomers || 0;
+        return (clientesRetidos / totalClientes * 100).toFixed(1);
     }
 }
 

@@ -1826,6 +1826,18 @@ class EnergyDrinksMarketSimulator {
 
         return csv;
     }
+
+    getTotalMarketSales(date) {
+        // Get total market sales for a specific date
+        let totalSales = 0;
+        Object.keys(this.brands).forEach(brandId => {
+            const brandData = this.historicalData[brandId].daily.find(d => d.date === date);
+            if (brandData) {
+                totalSales += brandData.unitsSold;
+            }
+        });
+        return totalSales || 1; // Avoid division by zero
+    }
 }
 
 // Initialize the market simulator
