@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Completo - Métricas de Marketing - Bebidas Energéticas Portugal</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary: #0d47a1;
+            --secondary: #1976d2;
+            --success: #2e7d32;
+            --info: #0288d1;
+            --warning: #f57c00;
+            --danger: #c62828;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            padding: 1rem;
+        }
+
+        .main-container {
+            margin-top: 20px;
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .brand-selector {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .data-table-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .btn-export {
+            background: #217346;
+            color: white;
+            border: none;
+            padding: 10px 30px;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+
+        .btn-export:hover {
+            background: #1e5e3a;
+            color: white;
+        }
+
+        .nav-tabs .nav-link {
+            color: #666;
+            border: none;
+            border-bottom: 3px solid transparent;
+        }
+
+        .nav-tabs .nav-link.active {
+            color: var(--primary);
+            background: none;
+            border-bottom: 3px solid var(--primary);
+        }
+
+        .table-responsive {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: 50px;
+        }
+
+        .info-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .brand-volt { background: #ffd54f; }
+        .brand-thunder { background: #90caf9; }
+        .brand-nitro { background: #ffab91; }
+        .brand-power { background: #a5d6a7; }
+        .brand-elite { background: #ce93d8; }
+        .brand-wildcat { background: #80deea; }
+        .brand-zen { background: #bcaaa4; }
+        .brand-max { background: #ef9a9a; }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-dark">
+        <div class="container-fluid">
+            <span class="navbar-brand">
+                <i class="bi bi-lightning-charge-fill"></i>
+                <strong>Simulador Completo de Métricas de Marketing</strong> - Mercado de Bebidas Energéticas Portugal
+            </span>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-light text-dark me-3">
+                    <i class="bi bi-database-fill"></i> 730 Dias | 8 Marcas | 100% Mercado
+                </span>
+                <button class="btn btn-export" onclick="exportarTudoExcel()">
+                    <i class="bi bi-file-earmark-excel"></i> Exportar TUDO para Excel
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid main-container">
+        <!-- Filtros e Controlos -->
+        <div class="row mb-3">
+            <div class="col-md-3">
+                <div class="brand-selector">
+                    <label class="form-label fw-bold">Selecionar Marca</label>
+                    <select class="form-select" id="brandSelect" onchange="atualizarDados()">
+                        <option value="all">📊 Todas as Marcas</option>
+                        <option value="volt">⚡ VOLT Energy</option>
+                        <option value="thunder">🌩️ Thunder Strike</option>
+                        <option value="nitro">🚀 NitroFuel</option>
+                        <option value="power">💪 PowerRush</option>
+                        <option value="elite">👑 EliteBoost</option>
+                        <option value="wildcat">🐆 WildCat Energy</option>
+                        <option value="zen">🧘 ZenFlow</option>
+                        <option value="max">🔥 MaxForce</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="brand-selector">
+                    <label class="form-label fw-bold">Período de Análise</label>
+                    <select class="form-select" id="periodSelect" onchange="atualizarDados()">
+                        <option value="all">Todos os 730 Dias</option>
+                        <option value="last30">Últimos 30 Dias</option>
+                        <option value="last90">Últimos 90 Dias</option>
+                        <option value="last180">Últimos 180 Dias</option>
+                        <option value="last365">Último Ano</option>
+                        <option value="year1">Ano 1</option>
+                        <option value="year2">Ano 2</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="brand-selector">
+                    <label class="form-label fw-bold">Vista de Dados</label>
+                    <select class="form-select" id="viewSelect" onchange="atualizarVista()">
+                        <option value="daily">Dados Diários</option>
+                        <option value="weekly">Agregado Semanal</option>
+                        <option value="monthly">Agregado Mensal</option>
+                        <option value="quarterly">Agregado Trimestral</option>
+                        <option value="comparison">Comparação Competitiva</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="brand-selector">
+                    <label class="form-label fw-bold">Ações Rápidas</label>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-primary" onclick="mostrarAnaliseCompetitiva()">
+                            <i class="bi bi-graph-up"></i> Análise Competitiva
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cards de Estatísticas -->
+        <div class="row" id="statsCards">
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stat-label">Quota de Mercado</div>
+                    <div class="stat-value" id="marketShareValue">--%</div>
+                    <small class="text-muted">Posição: <span id="marketPosition">--</span></small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stat-label">Vendas Totais</div>
+                    <div class="stat-value" id="totalSalesValue">0</div>
+                    <small class="text-muted">Unidades no período</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stat-label">Faturação</div>
+                    <div class="stat-value" id="revenueValue">€0</div>
+                    <small class="text-muted">Vendas líquidas</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stats-card">
+                    <div class="stat-label">Base de Clientes</div>
+                    <div class="stat-value" id="customersValue">0</div>
+                    <small class="text-muted">B2C + B2B</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs de Navegação -->
+        <ul class="nav nav-tabs mb-3" id="dataTabs">
+            <li class="nav-item">
+                <a class="nav-link active" data-bs-toggle="tab" href="#historico">
+                    <i class="bi bi-calendar3"></i> Histórico Completo
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#financeiro">
+                    <i class="bi bi-currency-euro"></i> Financeiro
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#clientes">
+                    <i class="bi bi-people-fill"></i> Clientes
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#marketing">
+                    <i class="bi bi-megaphone-fill"></i> Marketing
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#digital">
+                    <i class="bi bi-globe"></i> Digital
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#graficos">
+                    <i class="bi bi-graph-up"></i> Gráficos
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" data-bs-toggle="tab" href="#competicao">
+                    <i class="bi bi-trophy-fill"></i> Competição
+                </a>
+            </li>
+        </ul>
+
+        <!-- Conteúdo das Tabs -->
+        <div class="tab-content">
+            <!-- Tab Histórico -->
+            <div class="tab-pane fade show active" id="historico">
+                <div class="data-table-container">
+                    <h5><i class="bi bi-table"></i> Dados Históricos Completos</h5>
+                    <div class="loading-spinner">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">A carregar...</span>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover" id="historicoTable">
+                            <thead class="table-dark sticky-top">
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Marca</th>
+                                    <th>Vendas (un)</th>
+                                    <th>Receita Bruta</th>
+                                    <th>Descontos</th>
+                                    <th>Receita Líquida</th>
+                                    <th>Clientes B2C</th>
+                                    <th>Clientes B2B</th>
+                                    <th>Novos Clientes</th>
+                                    <th>Marketing Invest.</th>
+                                    <th>Quota Mercado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="historicoTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Financeiro -->
+            <div class="tab-pane fade" id="financeiro">
+                <div class="data-table-container">
+                    <h5><i class="bi bi-cash-stack"></i> Componentes Financeiros Detalhados</h5>
+                    <div id="financeiroContent"></div>
+                </div>
+            </div>
+
+            <!-- Tab Clientes -->
+            <div class="tab-pane fade" id="clientes">
+                <div class="data-table-container">
+                    <h5><i class="bi bi-people"></i> Análise de Clientes</h5>
+                    <div id="clientesContent"></div>
+                </div>
+            </div>
+
+            <!-- Tab Marketing -->
+            <div class="tab-pane fade" id="marketing">
+                <div class="data-table-container">
+                    <h5><i class="bi bi-megaphone"></i> Métricas de Marketing</h5>
+                    <div id="marketingContent"></div>
+                </div>
+            </div>
+
+            <!-- Tab Digital -->
+            <div class="tab-pane fade" id="digital">
+                <div class="data-table-container">
+                    <h5><i class="bi bi-laptop"></i> Marketing Digital</h5>
+                    <div id="digitalContent"></div>
+                </div>
+            </div>
+
+            <!-- Tab Gráficos -->
+            <div class="tab-pane fade" id="graficos">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h6>Evolução de Vendas</h6>
+                            <canvas id="salesChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="chart-container">
+                            <h6>Quota de Mercado</h6>
+                            <canvas id="marketShareChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-md-12 mt-3">
+                        <div class="chart-container">
+                            <h6>Análise Comparativa</h6>
+                            <canvas id="comparisonChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Competição -->
+            <div class="tab-pane fade" id="competicao">
+                <div class="data-table-container">
+                    <h5><i class="bi bi-trophy"></i> Análise Competitiva</h5>
+                    <div id="competicaoContent"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="data-generator-v2.js"></script>
+    <script src="app-v4.js"></script>
+</body>
+</html>
