@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mercado de Bebidas Energéticas - Simulador de Dados</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <nav class="navbar navbar-dark bg-primary shadow-sm">
+        <div class="container-fluid">
+            <span class="navbar-brand mb-0 h1">
+                <i class="bi bi-lightning-charge-fill"></i> Mercado de Bebidas Energéticas - Portugal
+            </span>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-light text-dark me-3">
+                    <i class="bi bi-database-fill"></i> 730 dias | 8 marcas | 100% dados
+                </span>
+                <span class="text-white me-3" id="currentDateTime"></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container-fluid mt-3">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-2">
+                <!-- Brand Selector -->
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-building"></i> Seleção de Marca</h6>
+                        <select class="form-select" id="brandSelector">
+                            <option value="all">Todas as Marcas</option>
+                            <option value="volt">VOLT Energy</option>
+                            <option value="thunder">Thunder Strike</option>
+                            <option value="nitro">NitroFuel</option>
+                            <option value="power">PowerRush</option>
+                            <option value="elite">EliteBoost</option>
+                            <option value="wildcat">WildCat Energy</option>
+                            <option value="zen">ZenFlow</option>
+                            <option value="max">MaxForce</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Data Type Selector -->
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-table"></i> Tipo de Dados</h6>
+                        <div class="nav flex-column nav-pills">
+                            <button class="nav-link active" data-view="raw">
+                                <i class="bi bi-database"></i> Dados Brutos
+                            </button>
+                            <button class="nav-link" data-view="financial">
+                                <i class="bi bi-currency-euro"></i> Financeiros
+                            </button>
+                            <button class="nav-link" data-view="customers">
+                                <i class="bi bi-people"></i> Clientes
+                            </button>
+                            <button class="nav-link" data-view="sales">
+                                <i class="bi bi-cart"></i> Vendas
+                            </button>
+                            <button class="nav-link" data-view="marketing">
+                                <i class="bi bi-megaphone"></i> Marketing
+                            </button>
+                            <button class="nav-link" data-view="digital">
+                                <i class="bi bi-laptop"></i> Digital
+                            </button>
+                            <button class="nav-link" data-view="competition">
+                                <i class="bi bi-trophy"></i> Concorrência
+                            </button>
+                            <button class="nav-link" data-view="decisions">
+                                <i class="bi bi-lightbulb"></i> Decisões
+                            </button>
+                            <button class="nav-link" data-view="transactions">
+                                <i class="bi bi-receipt"></i> Transações
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Period Selector -->
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-calendar3"></i> Período</h6>
+                        <select class="form-select mb-2" id="periodType">
+                            <option value="daily">Diário</option>
+                            <option value="weekly">Semanal</option>
+                            <option value="monthly">Mensal</option>
+                            <option value="quarterly">Trimestral</option>
+                            <option value="yearly">Anual</option>
+                        </select>
+                        <input type="date" class="form-control mb-2" id="startDate">
+                        <input type="date" class="form-control" id="endDate">
+                        <button class="btn btn-primary btn-sm w-100 mt-2" onclick="applyDateFilter()">
+                            <i class="bi bi-funnel"></i> Filtrar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Market Info -->
+                <div class="card shadow-sm">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-info-circle"></i> Info Mercado</h6>
+                        <small class="text-muted">
+                            <div><strong>Valor Total:</strong> €185M/ano</div>
+                            <div><strong>Volume:</strong> 52M litros/ano</div>
+                            <div><strong>Consumidores:</strong> 1.8M ativos</div>
+                            <div><strong>Crescimento:</strong> +12%/ano</div>
+                            <div><strong>Marcas:</strong> 8 competidoras</div>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Dashboard -->
+            <div class="col-md-10">
+                <!-- Market Overview Cards -->
+                <div class="row mb-3" id="overviewCards">
+                    <div class="col-md-3">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h6 class="text-muted">Quota de Mercado</h6>
+                                <h3 class="mb-0" id="marketShareDisplay">--%</h3>
+                                <div class="progress mt-2" style="height: 4px;">
+                                    <div class="progress-bar" id="marketShareBar" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h6 class="text-muted">Vendas (unidades)</h6>
+                                <h3 class="mb-0" id="unitsSoldDisplay">0</h3>
+                                <small id="unitsChange" class="text-muted">período selecionado</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h6 class="text-muted">Receita Líquida</h6>
+                                <h3 class="mb-0" id="revenueDisplay">€0</h3>
+                                <small id="revenueChange" class="text-muted">período selecionado</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card shadow-sm">
+                            <div class="card-body">
+                                <h6 class="text-muted">Base Clientes</h6>
+                                <h3 class="mb-0" id="customersDisplay">0</h3>
+                                <small id="customersChange" class="text-muted">B2C + B2B</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Data Table Section -->
+                <div class="card shadow-sm mb-3">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-table"></i> Dados Disponíveis <span id="dataCount" class="badge bg-secondary">0</span>
+                        </h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-primary" onclick="exportCurrentView('csv')">
+                                <i class="bi bi-file-earmark-csv"></i> CSV
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="exportCurrentView('json')">
+                                <i class="bi bi-file-earmark-code"></i> JSON
+                            </button>
+                            <button class="btn btn-sm btn-outline-primary" onclick="exportAllData()">
+                                <i class="bi bi-download"></i> Tudo
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                        <div id="dataTableContainer">
+                            <!-- Dynamic table will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Charts Row -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card shadow-sm mb-3">
+                            <div class="card-header bg-white">
+                                <h6 class="mb-0">Quota de Mercado - Distribuição Atual</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="marketShareChart" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card shadow-sm mb-3">
+                            <div class="card-header bg-white">
+                                <h6 class="mb-0">Evolução Temporal</h6>
+                            </div>
+                            <div class="card-body">
+                                <canvas id="timeSeriesChart" height="200"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Decisions & Events Timeline -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-white">
+                        <h5 class="mb-0"><i class="bi bi-calendar-event"></i> Timeline de Decisões e Eventos</h5>
+                    </div>
+                    <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                        <div id="timelineContainer">
+                            <!-- Timeline will be inserted here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal fade" id="helpModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Como Usar o Simulador</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <h6>Dados Disponíveis:</h6>
+                    <p>Este simulador contém TODOS os componentes necessários para calcular as métricas do curso:</p>
+                    <ul>
+                        <li>2 anos de dados históricos (730 dias)</li>
+                        <li>8 marcas competidoras no mercado de bebidas energéticas</li>
+                        <li>Todos os valores financeiros, de clientes, vendas, marketing e digitais</li>
+                        <li>Histórico completo de decisões e seus impactos</li>
+                        <li>Transações individuais para análise detalhada</li>
+                    </ul>
+
+                    <h6>Como Extrair Dados:</h6>
+                    <ol>
+                        <li>Selecione a marca ou "Todas as Marcas"</li>
+                        <li>Escolha o tipo de dados que precisa</li>
+                        <li>Defina o período de análise</li>
+                        <li>Exporte em CSV ou JSON</li>
+                    </ol>
+
+                    <h6>Importante:</h6>
+                    <p class="text-danger">As métricas NÃO estão calculadas. Vocês devem usar os dados brutos disponíveis para calcular todas as métricas conforme as fórmulas do curso.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-light mt-5 py-3">
+        <div class="container text-center">
+            <small class="text-muted">
+                Simulador de Dados - Métricas de Marketing IPP © 2025 |
+                Dados simulados do mercado de bebidas energéticas em Portugal |
+                <a href="#" data-bs-toggle="modal" data-bs-target="#helpModal">Ajuda</a>
+            </small>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="data-generator-v2.js"></script>
+    <script src="app-v2.js"></script>
+</body>
+</html>
